@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import {Plus,Search} from "lucide-react";
 import type { Product } from "@/types/product";
 import { formatCurrency } from "@/utils/currency";
+import { getProducts } from "@/utils/product-storage";
 
 const sampleProducts: Product[] = [
   {
@@ -34,14 +35,20 @@ const sampleProducts: Product[] = [
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    setProducts(getProducts());
+  }, []);
+
   const filtered = useMemo(() => {
     const keyword = search.toLowerCase();
 
-    return sampleProducts.filter((product) =>
+    return products.filter((product) =>
         product.name.toLowerCase().includes(keyword) ||
         product.sku.toLowerCase().includes(keyword)
     );
-  }, [search]);
+  }, [products, search]);
 
   return (
     <div>
