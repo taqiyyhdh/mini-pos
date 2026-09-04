@@ -5,12 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductInput } from "@/types/product";
 
-// Definisikan tipe props
 type ProductFormProps = {
-  initialValues?: ProductInput;
+  defaultValues?: ProductInput;
   submitLabel?: string;
-  onSubmit: (values: ProductInput) => void;
-}
+  onSubmit: (input: ProductInput) => void;
+};
 
 // nilai bawaan (default values)
 const defaultValues: ProductInput = {
@@ -22,11 +21,19 @@ const defaultValues: ProductInput = {
 
 // komponent utama
 export function ProductForm({
-  initialValues = defaultValues,
-  submitLabel = "Simpan Produk",
+  defaultValues ,
+  submitLabel = "Simpan",
   onSubmit,
 }: ProductFormProps) {
-  const [values, setValues] = useState<ProductInput>(initialValues);
+
+  const [values, setValues] = useState<ProductInput>(
+    {
+    name: defaultValues?.name ?? "",
+    sku: defaultValues?.sku ?? "",
+    price: defaultValues?.price ?? 0,
+    stock: defaultValues?.stock ?? 0,
+  }
+  );
   
   // helper untuk update input field
   function updateField(
@@ -41,25 +48,25 @@ export function ProductForm({
     }));
   }
   
-// definisikan tipe dan fungsi validasi
-type FormErrors = Partial<Record<keyof ProductInput, string>>;
+  // definisikan tipe dan fungsi validasi
+  type FormErrors = Partial<Record<keyof ProductInput, string>>;
 
-function validateProduct(values: ProductInput) {
-  const errors: FormErrors = {};
-  if (!values.name.trim()) {
-    errors.name = "Nama produk wajib diisi.";
+  function validateProduct(values: ProductInput) {
+    const errors: FormErrors = {};
+    if (!values.name.trim()) {
+      errors.name = "Nama produk wajib diisi.";
+    }
+    if (!values.sku.trim()) {
+      errors.sku = "SKU wajib diisi.";
+    }
+    if (values.price <= 0) {
+      errors.price = "Harga harus lebih dari 0.";
+    }
+    if (values.stock <= 0) {
+      errors.stock = "Stok tidak boleh minus.";
+    }
+    return errors;
   }
-  if (!values.sku.trim()) {
-    errors.sku = "SKU wajib diisi.";
-  }
-  if (values.price <= 0) {
-    errors.price = "Harga harus lebih dari 0.";
-  }
-  if (values.stock <= 0) {
-    errors.stock = "Stok tidak boleh minus.";
-  }
-  return errors;
-}
 
   // handler untuk submit form
   const [errors, setErrors] = useState<FormErrors>({});
@@ -104,9 +111,9 @@ function validateProduct(values: ProductInput) {
           placeholder="Contoh: KOPI001"
         />
 
-         {errors.name && (
+         {errors.sku && (
           <p className="mt-1 text-sm font-semibold text-red-600">
-            {errors.name}
+            {errors.sku}
           </p>
         )}
       </div>
@@ -148,7 +155,7 @@ function validateProduct(values: ProductInput) {
       </div>
 
       <div  className="flex items-center justify-end gap-3">
-        <Button variant="secondary" asChild>
+        <Button variant="secondary" >
           <Link href="/products">Batal</Link>
         </Button>
         <Button type="submit">

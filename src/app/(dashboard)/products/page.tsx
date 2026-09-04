@@ -8,6 +8,8 @@ import {Plus,Search} from "lucide-react";
 import type { Product } from "@/types/product";
 import { formatCurrency } from "@/utils/currency";
 import { getProducts } from "@/utils/product-storage";
+import { Pencil, Trash2 } from "lucide-react";
+import { deleteProduct } from "@/lib/product-storage";
 
 const sampleProducts: Product[] = [
   {
@@ -37,18 +39,39 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
 
+
   useEffect(() => {
     setProducts(getProducts());
   }, []);
 
-  const filtered = useMemo(() => {
-    const keyword = search.toLowerCase();
+  // const filtered = useMemo(() => {
+  //   const keyword = search.toLowerCase();
 
-    return products.filter((product) =>
-        product.name.toLowerCase().includes(keyword) ||
-        product.sku.toLowerCase().includes(keyword)
+  //   return products.filter((product) =>
+  //       product.name.toLowerCase().includes(keyword) ||
+  //       product.sku.toLowerCase().includes(keyword)
+  //   );
+  // }, [products, search]);
+
+  const filteredProducts = products.filter ((product) => {
+    const keyword = search.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(keyword) ||
+      product.sku.toLowerCase().includes(keyword)
     );
-  }, [products, search]);
+  });
+
+  function handleDelete(id: string) {
+    const confirmed = window.confirm(
+      "Yakin ingin menghapus produk ini?"
+    );
+    if (!confirmed) {
+      return;
+    }
+    deleteProduct(id);
+    const latestProducts = getProducts();
+    setProducts(latestProducts);
+  }
 
   return (
     <div>
@@ -82,7 +105,7 @@ export default function ProductsPage() {
           className="pl-3"
           />
       </div>
-      {filtered.length > 0 && (
+      {filteredProducts.length > 0 && (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-leftt text-sm">
@@ -96,7 +119,7 @@ export default function ProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map((product) => {
+                {filteredProducts.map((product) => {
                   const stockColor =
                     product.stock <= 5
                       ? "bg-amber-100 text-amber-800"
@@ -123,13 +146,17 @@ export default function ProductsPage() {
                         <div className="flex justify-center gap-2">
                           <Link
                             href={"/products/" + product.id + "/edit"}
-                            className="rounded-lg border px-3 py-2 text-sm text-slate-700"
+                            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-bold text-white"
                           >
+                            <Pencil size={18} />
                             Edit
                           </Link>
-                          <button 
-                            className="rounded-lg border border-rose-200 px-3 py-2 text-sm text-rose-600"
+                          <button  
+                            type="button"
+                            onClick={() => handleDelete(product.id)}
+                            className="flex items-center gap-2 rounded-lg border bg-red-600 px-3 py-2 text-sm font-bold text-white"
                           >
+                            <Trash2 size={18} />
                             Hapus
                           </button>
                         </div>
@@ -142,13 +169,32 @@ export default function ProductsPage() {
           </div>
         </div>
       )}
-      {sampleProducts.length === 0 && (
+      {filteredProducts.length === 0 && (
         <EmptyState 
           title="Belum ada produk"
           description="Tambahkan produk pertama untuk memulai transaksi POS."
         />
       )}
-      {sampleProducts.length > 0 && filtered.length === 0 &&(
+
+      {/* {filteredProducts.length === 0 ? (
+        <EmptyState 
+          title="Produk tidak ditemukan"
+          description="Coba gunakan kata kunci lain atau tambahkan produk baru."
+        />
+        ): (
+          <div className="grid gap-3">
+            <Search className="mx-auto mb-2" />
+            {filteredProducts.map((product) => (
+              <ProductRow
+                key={product.id}
+                product={product}
+              />
+            ))}
+          </div>
+        )
+      } */}
+
+      {sampleProducts.length > 0 && filteredProducts.length === 0 &&(
         <div className="rounded-2xl bg-white p-8 text-center text-sm text-slate-500">
           <Search className="mx-auto mb-2" />
           Produk tidak ditemukan.
