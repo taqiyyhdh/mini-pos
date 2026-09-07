@@ -1,13 +1,15 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { ProductForm } from "@/components/products/product-form";
-import { addProduct } from "@/utils/product-storage";
+import { addProduct } from "@/services/product.service";
 import type { ProductInput } from "@/types/product";
 
 export default function CreateProductPage() {
   const router = useRouter();
-  function handleCreateProduct(values: ProductInput) {
-    addProduct(values);
+ 
+  async function handleSubmit(input: ProductInput) {
+    await addProduct(input);
+    
     router.push("/products");
   }
 
@@ -26,7 +28,7 @@ export default function CreateProductPage() {
       </p>
       
       <div className="mt-6 rounded-2xl border bg-white p-5 shadow-sm">
-        <ProductForm onSubmit={handleCreateProduct} />
+        <ProductForm onSubmit={handleSubmit} />
       </div>
 
     </div>

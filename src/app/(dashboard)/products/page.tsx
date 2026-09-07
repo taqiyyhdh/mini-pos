@@ -7,9 +7,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import {Plus,Search} from "lucide-react";
 import type { Product } from "@/types/product";
 import { formatCurrency } from "@/utils/currency";
-import { getProducts } from "@/utils/product-storage";
 import { Pencil, Trash2 } from "lucide-react";
-import { deleteProduct } from "@/lib/product-storage";
+import { deleteProduct, getProducts } from "@/services/product.service";
 
 const sampleProducts: Product[] = [
   {
@@ -38,11 +37,42 @@ const sampleProducts: Product[] = [
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [keyword, setKeyword] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error,setError] = useState("");
 
+  async function loadProducts() {
+    try {
+      setLoading(true);
+      setError("");
 
+      const data = await getProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error(error);
+      setError("Gagal memuat produk.");
+    }  finally {
+      setLoading(false);
+    }
+  }
   useEffect(() => {
-    setProducts(getProducts());
+    loadProducts();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border bg-white p-6">
+        Memuat data produk...
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
+        {error}
+      </div>
+    )
+  }
 
   // const filtered = useMemo(() => {
   //   const keyword = search.toLowerCase();
@@ -61,16 +91,13 @@ export default function ProductsPage() {
     );
   });
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
     const confirmed = window.confirm(
       "Yakin ingin menghapus produk ini?"
     );
-    if (!confirmed) {
-      return;
-    }
-    deleteProduct(id);
-    const latestProducts = getProducts();
-    setProducts(latestProducts);
+    if (!confirmed) return;
+    await deleteProduct(id);
+    await loadProducts();
   }
 
   return (

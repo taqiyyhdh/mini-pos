@@ -7,7 +7,7 @@ import { ProductForm } from "@/components/products/product-form";
 import {
   getProductById,
   updateProduct,
-} from "@/lib/product-storage";
+} from "@/services/product.service";
 
 import type {
   ProductInput,
@@ -20,28 +20,32 @@ export default function EditProductPage () {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-
+ 
   useEffect(() => {
-    const selectedProduct = getProductById(params.id);
-
-    setProduct(selectedProduct);
-    setLoading(false);
+      async function loadProduct() {
+      const data = await getProductById(params.id);
+      setProduct(data ?? null);
+      setLoading(false);
+    }
+    loadProduct();
   }, [params.id]);
 
   if (loading) {
-    return <p>Memuat produk...</p>
+    return <p>Memuat data produk...</p>
   }
 
   if (!product) {
     return <p>Produk tidak ditemukan</p>
   }
 
-  function handleSubmit (input: ProductInput) {
-    if(!product) return
-    updateProduct(product.id, input);
+  async function handleSubmit(input: ProductInput) {
+    if (!product) return;
+
+    await updateProduct(product.id, input);
 
     router.push("/products");
   }
+
   return (
     <div>
       <p className="text-sm font-bold text-indigo-600">
