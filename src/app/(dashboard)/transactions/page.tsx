@@ -1,7 +1,7 @@
-export default function TransactionsPage() {
+export default function NewTransactionsPage() {
   return (
     <div>
-      <h1>Riwayat Transaksi</h1>
+      <h1>KASIR / POS</h1>
       <p>Riwayat transaksi akan tampil di sini.</p>
     </div>
   )
