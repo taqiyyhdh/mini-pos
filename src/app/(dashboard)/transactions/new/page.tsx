@@ -8,6 +8,9 @@ import { getProducts } from "@/services/product.service";
 import type { Product } from "@/types/product";
 import type { CartItem, PaymentMethod } from "@/types/cart";
 import { formatRupiah } from "@/utils/format";
+import { useRouter } from "next/navigation";
+import { createTransaction } from "@/services/transaction.service";
+
 
 export default function NewTransactionPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -87,21 +90,20 @@ export default function NewTransactionPage() {
     return Math.max(subtotal - discount, 0);
   }, [subtotal, discount]);
 
-  function handleCheckout() {
-    if (cartItems.length === 0) {
-      alert("keranjang masih kosong");
-      return;
-    }
-    const payload = {
-      items:cartItems,
-      subtotal,
-      discount,
-      grandTotal,
-      paymentMethod,
-    };
-    console.log("checkout payload", payload);
-    alert("Checkout berhasil disiapkan. Lilat console.");
-  }
+const router = useRouter();
+const [paidAmount, setPaidAmount] = useState(0);
+
+async function handleCheckout() {
+  const transactionId = await createTransaction({
+    items: cartItems,
+    total: grandTotal,
+    paidAmount,
+    paymentMethod,
+  });
+
+  router.push("/transactions/" + transactionId);
+}
+
 
   return(
     <div className="flex flex-col gap-6">
