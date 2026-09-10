@@ -24,3 +24,27 @@ body {
   color: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* print invoice */
+@media print {
+  aside, nav, header, footer, .print\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  /* Perbesar seluruh tampilan struk saat diprint */
+  .printable-area {
+    width: 100% !important;
+    max-width: 100% !important;
+    zoom: 160%;
+    margin: 0 auto !important;
+  }
+
+  @page {
+    margin: 15mm;
+    size: portrait;
+  }
+}
