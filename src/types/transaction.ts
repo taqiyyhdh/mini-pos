@@ -1,23 +1,26 @@
-export type TransactionItem = {
+import type { Timestamp } from "firebase/firestore";
+
+export type PaymentMethod = "cash" | "transfer" | "qris";
+
+export type CartItem = {
   productId: string;
   name: string;
+  sku: string;
   price: number;
-  qyt: number;
-  subtotal: number;
-}
+  quantity: number;
+  stock: number;
+};
 
-export type PaymentMethod = 
-  | "cash"
-  | "qris"
-  | "transfer"
+export type TransactionItem = Omit<CartItem, "stock">;
 
-export type Transaction = {
+export type SaleTransaction = {
   id: string;
   invoiceNumber: string;
   items: TransactionItem[];
+  subtotal: number;
   total: number;
-  paidAmount: number;
-  changeAmount: number;
-  changeMethod: PaymentMethod;
-  createAt; Date;
+  paymentMethod: PaymentMethod;
+  paymentAmount: number;
+  change: number;
+  createdAt?: Timestamp;
 };

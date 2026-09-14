@@ -1,115 +1,88 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getTransactions } from "@/services/transaction.service";
 import Link from "next/link";
-import { formateDate } from "@/utils/format";
+import { Plus } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useAuth } from "@/contexts/auth-context";
+import { getTransactions } from "@/services/transaction.service";
+import type { SaleTransaction } from "@/types/transaction";
 import { formatCurrency } from "@/utils/currency";
-
+import { formatDate } from "@/utils/date";
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState([]);
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<SaleTransaction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadData() {
-      const data = await getTransactions();
-      setTransactions(data);
+  const load = useCallback(async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      setTransactions(await getTransactions(user.uid));
+    } finally {
       setLoading(false);
     }
+  }, [user]);
 
-    loadData();
-  }, []);
-
-  // Helper function untuk menentukan warna badge berdasarkan metode pembayaran
-  const getPaymentMethodBadge = (method: string) => {
-  switch (method?.toUpperCase()) {
-    case "CASH":
-      return "bg-emerald-50 text-emerald-700 border-emerald-200"; // Hijau
-    case "QRIS":
-      return "bg-pink-50 text-pink-700 border-pink-200";       // Pink
-    case "TRANSFER":
-      return "bg-amber-50 text-amber-700 border-amber-200";    // Kuning
-    default:
-      return "bg-slate-50 text-slate-700 border-slate-200";
-  }
-};
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   return (
     <div>
-      <div className="mb-7">
-        <p className="text-sm font-bold text-indigo-600">
-          RIWAYAT
-        </p>
-        <h1 className="mt-1 text-3xl font-black tracking-tight">
-          Daftar Tranaksi
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Kelola dan pantau seluruh riwayat transaksi penjualan toko.
-        </p>
-      </div>
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
-            {/* Header Tabel */}
-            <thead className="bg-indigo-200 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              <tr>
-                <th className="px-6 py-4">No. Invoice</th>
-                <th className="px-6 py-4">Tanggal</th>
-                <th className="px-6 py-4">Total</th>
-                <th className="px-6 py-4 text-center">Metode Pembayaran</th>
-                <th className="px-6 py-4 text-center">Aksi</th>
-              </tr>
-            </thead>
-
-            {/* Body Tabel */}
-            <tbody className="divide-y divide-gray-100 text-gray-700">
-              {transactions.map((transaction) => (
-                <tr 
-                  key={transaction.id} 
-                  className="hover:bg-gray-50/80 transition-colors"
-                >
-                  
-                  <td className="px-6 py-4 font-semibold text-gray-900 whitespace-nowrap">
-                    {transaction.invoiceNumber}
-                  </td>
-
-                
-                  <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
-                    {formateDate(transaction.createAt)}
-                  </td>
-
-                  
-                  <td className="px-6 py-4 font-bold text-gray-900 whitespace-nowrap">
-                    {formatCurrency(transaction.total)}
-                  </td>
-
-              
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border uppercase ${getPaymentMethodBadge(
-                        transaction.paymentMethod
-                      )}`}
-                    >
-                      {transaction.paymentMethod}
-                    </span>
-                  </td>
-
-                
-                  <td className="px-6 py-4 text-right whitespace-nowrap">
-                    <Link 
-                      href={"/transactions/" + transaction.id}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      Lihat Invoice
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-bold text-indigo-600">TRANSAKSI</p>
+          <h1 className="mt-1 text-3xl font-black tracking-tight">Riwayat Transaksi</h1>
+          <p className="mt-2 text-sm text-slate-500">Semua transaksi yang berhasil disimpan.</p>
         </div>
+        <Link href="/transactions/new">
+          <Button><Plus size={18} /> Transaksi Baru</Button>
+        </Link>
       </div>
-   </div> 
-  )
+
+      {loading && <div className="rounded-2xl bg-white p-8 text-sm text-slate-500">Memuat transaksi...</div>}
+      {!loading && transactions.length === 0 && (
+        <EmptyState
+          title="Belum ada transaksi"
+          description="Buat transaksi pertama melalui halaman Kasir / POS."
+        />
+      )}
+
+      {!loading && transactions.length > 0 && (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-5 py-4">Invoice</th>
+                  <th className="px-5 py-4">Tanggal</th>
+                  <th className="px-5 py-4">Item</th>
+                  <th className="px-5 py-4">Metode</th>
+                  <th className="px-5 py-4 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {transactions.map((trx) => (
+                  <tr key={trx.id} className="hover:bg-slate-50">
+                    <td className="px-5 py-4">
+                      <Link href={`/transactions/${trx.id}`} className="font-black text-indigo-600 hover:underline">
+                        {trx.invoiceNumber}
+                      </Link>
+                    </td>
+                    <td className="px-5 py-4 text-slate-500">{formatDate(trx.createdAt)}</td>
+                    <td className="px-5 py-4">{trx.items.length}</td>
+                    <td className="px-5 py-4 uppercase">{trx.paymentMethod}</td>
+                    <td className="px-5 py-4 text-right font-black">{formatCurrency(trx.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
