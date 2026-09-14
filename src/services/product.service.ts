@@ -3,77 +3,46 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
-
-import {db} from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import type { Product, ProductInput } from "@/types/product";
 
-const DEMO_USER_ID = "demo-user";
-function productCollection() {
-  return collection(
-    db,
-    "users",
-    DEMO_USER_ID,
-    "products"
-  );
+function productsCollection(uid: string) {
+  return collection(db, "users", uid, "products");
 }
 
-export async function getProducts(): Promise<Product[]>{
-  const productsQuery = query(
-    productCollection(),
-    orderBy("createdAt", "desc")
-  );
-  const snapshot = await getDocs(productsQuery);
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as Product[];
+export async function getProducts(uid: string): Promise<Product[]> {
+  const snapshot = await getDocs(query(productsCollection(uid), orderBy("createdAt", "desc")));
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() } as Product));
 }
 
-export async function addProduct(input: ProductInput) {
-  await addDoc(productCollection(), {
+export async function getProduct(uid: string, productId: string): Promise<Product | null> {
+  const snapshot = await getDoc(doc(db, "users", uid, "products", productId));
+  if (!snapshot.exists()) return null;
+  return { id: snapshot.id, ...snapshot.data() } as Product;
+}
+
+export async function createProduct(uid: string, input: ProductInput) {
+  return addDoc(productsCollection(uid), {
     ...input,
     createdAt: serverTimestamp(),
-    updateAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
 }
 
-export async function updateProduct(
-  id:string,
-  input: ProductInput
-) {
-  const productRef = doc(
-    db,
-    "users",
-    DEMO_USER_ID,
-    "products",
-    id
-  )
-  await updateDoc(productRef, {
+export async function updateProduct(uid: string, productId: string, input: ProductInput) {
+  return updateDoc(doc(db, "users", uid, "products", productId), {
     ...input,
-    updateAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
 }
 
-export async function deleteProduct(id: string) {
-  const productRef = doc(
-    db,
-    "users",
-    DEMO_USER_ID,
-    "products",
-    id
-  );
-  await deleteDoc(productRef);
-}
-
-export async function getProductById(id:string) {
-  const products = await getProducts();
-  return products.find(
-    (product) => product.id === id
-  );
+export async function deleteProduct(uid: string, productId: string) {
+  return deleteDoc(doc(db, "users", uid, "products", productId));
 }

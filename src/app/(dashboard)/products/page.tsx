@@ -1,6 +1,8 @@
+/* eslint-disable react-hooks/rules-of-hooks */
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 import Link from "next/link";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -9,94 +11,45 @@ import type { Product } from "@/types/product";
 import { formatCurrency } from "@/utils/currency";
 import { Pencil, Trash2 } from "lucide-react";
 import { deleteProduct, getProducts } from "@/services/product.service";
-
-const sampleProducts: Product[] = [
-  {
-    id: "1",
-    name: "Kopi Susu",
-    sku: "KOPI001",
-    price: 18000,
-    stock: 10,
-  },
-  {
-    id: "2",
-    name: "Teh Manis",
-    sku: "TEH001",
-    price: 8000,
-    stock: 5,
-  },
-  {
-    id: "3",
-    name: "Roti Bakar",
-    sku: "ROTI001",
-    price: 15000,
-    stock:3,
-  },  
-];
+import { useAuth } from "@/contexts/auth-context";
 
 export default function ProductsPage() {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
-  const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(true);
   const [error,setError] = useState("");
 
-  async function loadProducts() {
-    try {
+  const loadProducts = useCallback(async () =>{
+    if (!user) return;
+     try {
       setLoading(true);
       setError("");
-
-      const data = await getProducts();
-      setProducts(data);
-    } catch (error) {
-      console.error(error);
-      setError("Gagal memuat produk.");
+      setProducts(await getProducts(user.uid));
+    } catch (e) {
+      console.log(e)
+      setError("Gagal mengambil produk.");
     }  finally {
       setLoading(false);
     }
-  }
+  }, [user]) ;
+   
   useEffect(() => {
-    loadProducts();
-  }, []);
+    void loadProducts();
+  }, [loadProducts]);
 
-  if (loading) {
-    return (
-      <div className="rounded-2xl border bg-white p-6">
-        Memuat data produk...
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
-        {error}
-      </div>
-    )
-  }
-
-  // const filtered = useMemo(() => {
-  //   const keyword = search.toLowerCase();
-
-  //   return products.filter((product) =>
-  //       product.name.toLowerCase().includes(keyword) ||
-  //       product.sku.toLowerCase().includes(keyword)
-  //   );
-  // }, [products, search]);
-
-  const filteredProducts = products.filter ((product) => {
+  const filtered = useMemo(() => {
     const keyword = search.toLowerCase();
-    return (
-      product.name.toLowerCase().includes(keyword) ||
-      product.sku.toLowerCase().includes(keyword)
-    );
-  });
 
-  async function handleDelete(id: string) {
-    const confirmed = window.confirm(
-      "Yakin ingin menghapus produk ini?"
+    return products.filter((product) =>
+        product.name.toLowerCase().includes(keyword) ||
+        product.sku.toLowerCase().includes(keyword)
     );
-    if (!confirmed) return;
-    await deleteProduct(id);
+  }, [products, search]);
+
+  async function handleDelete(product: Product) {
+    if (!user || !window.confirm(`Hapus produk ${product.name}?`)) return;
+    await deleteProduct(user.uid, product.id);
     await loadProducts();
   }
 
@@ -128,11 +81,16 @@ export default function ProductsPage() {
         <Input
           placeholder="Cari nama atau SKU..."
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           className="pl-3"
           />
       </div>
-      {filteredProducts.length > 0 && (
+      
+      {loading && <div className="rounded-2xl bg-white p-8 text-sm text-slate-500">Memuat produk...</div>}
+      {error && <div className="rounded-2xl bg-rose-50 p-5 text-sm font-semibold text-rose-700">{error}</div>}
+      {!loading && !error && products.length === 0 && <EmptyState title="Belum ada produk" description="Tambahkan produk pertama untuk memulai transaksi POS." />}
+
+      {!loading && filtered.length > 0 && (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-leftt text-sm">
@@ -146,7 +104,7 @@ export default function ProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredProducts.map((product) => {
+                {filtered.map((product) => {
                   const stockColor =
                     product.stock <= 5
                       ? "bg-amber-100 text-amber-800"
@@ -172,7 +130,7 @@ export default function ProductsPage() {
                       <td className="px-5 py-4">
                         <div className="flex justify-center gap-2">
                           <Link
-                            href={"/products/" + product.id + "/edit"}
+                            href={`/products/${product.id}/edit`}
                             className="flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-bold text-white"
                           >
                             <Pencil size={18} />
@@ -180,7 +138,7 @@ export default function ProductsPage() {
                           </Link>
                           <button  
                             type="button"
-                            onClick={() => handleDelete(product.id)}
+                            onClick={() => void handleDelete(product)}
                             className="flex items-center gap-2 rounded-lg border bg-red-600 px-3 py-2 text-sm font-bold text-white"
                           >
                             <Trash2 size={18} />
@@ -196,32 +154,8 @@ export default function ProductsPage() {
           </div>
         </div>
       )}
-      {filteredProducts.length === 0 && (
-        <EmptyState 
-          title="Belum ada produk"
-          description="Tambahkan produk pertama untuk memulai transaksi POS."
-        />
-      )}
 
-      {/* {filteredProducts.length === 0 ? (
-        <EmptyState 
-          title="Produk tidak ditemukan"
-          description="Coba gunakan kata kunci lain atau tambahkan produk baru."
-        />
-        ): (
-          <div className="grid gap-3">
-            <Search className="mx-auto mb-2" />
-            {filteredProducts.map((product) => (
-              <ProductRow
-                key={product.id}
-                product={product}
-              />
-            ))}
-          </div>
-        )
-      } */}
-
-      {sampleProducts.length > 0 && filteredProducts.length === 0 &&(
+      {!loading && products.length > 0 && filtered.length === 0 &&(
         <div className="rounded-2xl bg-white p-8 text-center text-sm text-slate-500">
           <Search className="mx-auto mb-2" />
           Produk tidak ditemukan.

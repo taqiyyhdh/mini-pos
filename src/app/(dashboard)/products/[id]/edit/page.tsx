@@ -1,64 +1,54 @@
 "use client";
 
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import {useParams, useRouter} from "next/navigation";
 import { ProductForm } from "@/components/products/product-form";
+import { useAuth } from "@/contexts/auth-context";
+import { getProduct, updateProduct } from "@/services/product.service";
+import type { ProductInput } from "@/types/product";
 
-import {
-  getProductById,
-  updateProduct,
-} from "@/services/product.service";
-
-import type {
-  ProductInput,
-  Product,
-} from "@/types/product";
-
-export default function EditProductPage () {
-  const router = useRouter();
+export default function EditProductPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const { user } = useAuth();
+  const [initialData, setInitialData] = useState<ProductInput | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
- 
   useEffect(() => {
-      async function loadProduct() {
-      const data = await getProductById(params.id);
-      setProduct(data ?? null);
-      setLoading(false);
-    }
-    loadProduct();
-  }, [params.id]);
+    if (!user) return;
+    getProduct(user.uid, params.id).then((product) => {
+      if (!product) return setNotFound(true);
+      setInitialData({ name: product.name, sku: product.sku, price: product.price, stock: product.stock });
+    });
+  }, [user, params.id]);
 
-  if (loading) {
-    return <p>Memuat data produk...</p>
-  }
-
-  if (!product) {
-    return <p>Produk tidak ditemukan</p>
-  }
-
-  async function handleSubmit(input: ProductInput) {
-    if (!product) return;
-
-    await updateProduct(product.id, input);
-
-    router.push("/products");
-  }
+  if (notFound) return <div className="rounded-2xl bg-white p-6">Produk tidak ditemukan.</div>;
+  if (!initialData) return <div className="rounded-2xl bg-white p-6">Memuat produk...</div>;
 
   return (
-    <div>
+    <div className="max-w-2xl">
       <p className="text-sm font-bold text-indigo-600">
         MASTER DATA
       </p>
-      <h1 className="mt-1 text-3xl font-black">
+
+      <h1 className="mt-1 text-3xl font-black tracking-tight">
         Edit Produk
       </h1>
-      <ProductForm
-        defaultValues={product}
-        submitLabel="Simpan Perubahan"
-        onSubmit={handleSubmit}
-      />
+
+      <p className="mt-2 text-sm text-slate-500">
+        Edit data produk di MiniPOS.
+      </p>
+      <div className="mt-4 rounded-2xl border bg-white p-5 shadow-sm">
+        <ProductForm
+          initialData={initialData}
+          submitLabel="Simpan Perubahan"
+          onSubmit={async (data) => {
+            if (!user) return;
+            await updateProduct(user.uid, params.id, data);
+            router.push("/products");
+          }}
+        />
+      </div>
     </div>
   );
 }

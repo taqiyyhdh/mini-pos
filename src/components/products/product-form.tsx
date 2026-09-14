@@ -1,168 +1,104 @@
 "use client";
-import { useState } from "react";
-import Link from "next/link";
+import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ProductInput } from "@/types/product";
+import type { ProductInput } from "@/types/product";
+import { LoaderCircle } from "lucide-react";
+import Link from "next/link";
 
-type ProductFormProps = {
-  defaultValues?: ProductInput;
+const initialValue: ProductInput = { name: "",sku: "", price: 0, stock: 0};
+
+type Props = {
+  initialData?: ProductInput;
   submitLabel?: string;
-  onSubmit: (input: ProductInput) => void;
-};
-
-// nilai bawaan (default values)
-const defaultValues: ProductInput = {
-  name: "",
-  sku: "",
-  price: 0,
-  stock: 0,
+  onSubmit: (data: ProductInput) => Promise<void>;
 };
 
 // komponent utama
 export function ProductForm({
-  defaultValues ,
-  submitLabel = "Simpan",
+  initialData ,
+  submitLabel = "Simpan Produk",
   onSubmit,
-}: ProductFormProps) {
+  }: Props) {
 
-  const [values, setValues] = useState<ProductInput>(
-    {
-    name: defaultValues?.name ?? "",
-    sku: defaultValues?.sku ?? "",
-    price: defaultValues?.price ?? 0,
-    stock: defaultValues?.stock ?? 0,
-  }
-  );
+  const [form, setForm] = useState<ProductInput>(initialData ?? initialValue);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   
-  // helper untuk update input field
-  function updateField(
-    field: keyof ProductInput,
-    value: string
-  ) {
-    setValues((current) =>  ({
-      ...current,
-      [field]: field === "price" || field === "stock"
-        ? Number(value)
-        : value,
-    }));
-  }
-  
-  // definisikan tipe dan fungsi validasi
-  type FormErrors = Partial<Record<keyof ProductInput, string>>;
+  useEffect(() => {
+    if (initialData) setForm(initialData);
+  }, [initialData]);
 
-  function validateProduct(values: ProductInput) {
-    const errors: FormErrors = {};
-    if (!values.name.trim()) {
-      errors.name = "Nama produk wajib diisi.";
-    }
-    if (!values.sku.trim()) {
-      errors.sku = "SKU wajib diisi.";
-    }
-    if (values.price <= 0) {
-      errors.price = "Harga harus lebih dari 0.";
-    }
-    if (values.stock <= 0) {
-      errors.stock = "Stok tidak boleh minus.";
-    }
-    return errors;
+  function setField<K extends keyof ProductInput>(field: K, value: ProductInput[K]) {
+    setForm((current) => ({ ...current, [field]: value}));
   }
 
   // handler untuk submit form
-  const [errors, setErrors] = useState<FormErrors>({});
-  function handleSubmit (event:React.FormEvent<HTMLFormElement>) {
-  event.preventDefault();
+  async function handleSubmit (event:FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
 
-    const validationErrors = validateProduct(values);
-    setErrors(validationErrors);
+    // validation
+    if(!form.name.trim() || !form.sku.trim()) return setError("Nama dan SKU wajib diisi.");
+    if (form.price <= 0 ) return setError("Harga harus lebih dari 0.");
+    if(form.stock < 0 ) return setError("Stok tidak boleh Negatif.");
 
-    if (Object.keys(validationErrors).length > 0) {
-      return;
+    try {
+      setLoading(true);
+      await onSubmit({ ...form, name: form.name.trim(), sku: form.sku.trim().toUpperCase() });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menyimpan produk.");
+    } finally {
+      setLoading(false);
     }
-    onSubmit(values);
+
   }
   
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div>
-        <label >
-          Nama Produk
-        </label>
-        <Input 
-          value={values.name}
-          onChange={(event) => updateField("name", event.target.value)}
+    <form onSubmit={handleSubmit} className="grid gap-5 rounded-2xl bg-white p-5 shadow-sm sm:p-6">
+      <Input 
+          label="Nama Produk"
           placeholder="Contoh: Kopi Susu"
-        />
-
-         {errors.name && (
-          <p className="mt-1 text-sm font-semibold text-red-600">
-            {errors.name}
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label >
-          SKU
-        </label>
-        <Input 
-          value={values.sku}
-          onChange={(event) => updateField("sku", event.target.value)}
+          value={form.name}
+          onChange={(e) => setField("name", e.target.value)}
+          />
+      <Input 
+          label="SKU"
           placeholder="Contoh: KOPI001"
-        />
-
-         {errors.sku && (
-          <p className="mt-1 text-sm font-semibold text-red-600">
-            {errors.sku}
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label >
-          Harga Produk
-        </label>
+          value={form.sku}
+          onChange={(e) => setField("sku", e.target.value)}
+          />
+      <div className="grid gap-5 sm:grid-cols">
         <Input 
-          type="number"
-          value={values.price}
-          onChange={(event) => updateField("price", event.target.value)}
+          label="Harga Produk"
           placeholder="Contoh: 18000"
-        />
-
-         {errors.price && (
-          <p className="mt-1 text-sm font-semibold text-red-600">
-            {errors.price}
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label >
-          Jumlah Stok
-        </label>
-        <Input 
           type="number"
-          value={values.stock}
-          onChange={(event) => updateField("stock", event.target.value)}
-          placeholder="Contoh: 12"
+          value={form.price || ""}
+          onChange={(e) => setField("price", Number(e.target.value))}
         />
 
-         {errors.stock && (
-          <p className="mt-1 text-sm font-semibold text-red-600">
-            {errors.stock}
-          </p>
-        )}
+      
+        <Input 
+          label="Stok"
+          placeholder="Contoh: 12"
+          type="number"
+          value={form.stock}
+          onChange={(e) => setField("stock", Number(e.target.value))}
+          />
       </div>
+
+      {error && <div className="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</div>}
 
       <div  className="flex items-center justify-end gap-3">
         <Button variant="secondary" >
           <Link href="/products">Batal</Link>
         </Button>
-        <Button type="submit">
-          {submitLabel}
+        <Button type="submit" disabled={loading} className="sm:w-fit">
+          {loading && <LoaderCircle size={18} className="animate-spin"/>}
+          {loading ? "Menyimpan..." : submitLabel}
         </Button>
       </div>
     </form>
-  )
+  );
 
 }

@@ -1,17 +1,13 @@
 "use client";
+
 import { useRouter } from "next/navigation";
 import { ProductForm } from "@/components/products/product-form";
-import { addProduct } from "@/services/product.service";
-import type { ProductInput } from "@/types/product";
+import { useAuth } from "@/contexts/auth-context";
+import { createProduct } from "@/services/product.service";
 
 export default function CreateProductPage() {
   const router = useRouter();
- 
-  async function handleSubmit(input: ProductInput) {
-    await addProduct(input);
-    
-    router.push("/products");
-  }
+  const { user } = useAuth();
 
   return (
     <div className="max-w-2xl">
@@ -27,8 +23,14 @@ export default function CreateProductPage() {
         Isi data produk yang akan dijual di MiniPOS.
       </p>
       
-      <div className="mt-6 rounded-2xl border bg-white p-5 shadow-sm">
-        <ProductForm onSubmit={handleSubmit} />
+      <div className="mt-4 rounded-2xl border bg-white p-5 shadow-sm">
+        <ProductForm 
+          onSubmit={async (data) => {
+            if(!user) return;
+            await createProduct(user.uid, data);
+            router.push("/products");
+          }}
+        />
       </div>
 
     </div>
